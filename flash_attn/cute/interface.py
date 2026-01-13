@@ -111,7 +111,7 @@ def _flash_attn_fwd(
     score_mod: Optional[Callable] = None,
     mask_mod: Optional[Callable] = None,
     block_sparse_tensors: Optional[BlockSparseTensorsTorch] = None,
-    return_lse: bool = True,
+    return_lse: bool = False,
     out: Optional[torch.Tensor] = None,
     lse: Optional[torch.Tensor] = None,
     aux_tensors: Optional[list[torch.Tensor]] = None,
@@ -1262,6 +1262,7 @@ class FlashAttnVarlenFunc(torch.autograd.Function):
         deterministic: bool = False,
         score_mod: Optional[Callable] = None,
         aux_tensors: Optional[list] = None,
+        return_lse: bool = False,
     ):
         out, lse = _flash_attn_fwd(
             q,
@@ -1282,6 +1283,7 @@ class FlashAttnVarlenFunc(torch.autograd.Function):
             pack_gqa=pack_gqa,
             score_mod=score_mod,
             aux_tensors=aux_tensors,
+            return_lse=return_lse
         )
         ctx.save_for_backward(q, k, v, out, lse, cu_seqlens_q, cu_seqlens_k, seqused_q, seqused_k)
         ctx.softmax_scale = softmax_scale
@@ -1373,6 +1375,7 @@ def flash_attn_varlen_func(
     deterministic: bool = False,
     score_mod: Optional[Callable] = None,
     aux_tensors: Optional[list] = None,
+    return_lse: bool = False,
 ):
     return FlashAttnVarlenFunc.apply(
         q,
@@ -1393,6 +1396,7 @@ def flash_attn_varlen_func(
         deterministic,
         score_mod,
         aux_tensors,
+        return_lse
     )
 
 
