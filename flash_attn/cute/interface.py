@@ -1356,7 +1356,7 @@ def flash_attn_func(
         full_block_idx,
         mask_block_cnt,
         mask_block_idx,
-        return_lse=return_lse,
+        return_lse,
     )
 
 
