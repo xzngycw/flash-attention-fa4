@@ -115,6 +115,8 @@ def _flash_attn_fwd(
     out: Optional[torch.Tensor] = None,
     lse: Optional[torch.Tensor] = None,
     aux_tensors: Optional[list[torch.Tensor]] = None,
+    rescale_threshold: Optional[float] = None,
+    disable_e2e: bool = False,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """Forward pass for FlashAttention.
 
@@ -360,6 +362,8 @@ def _flash_attn_fwd(
         pack_gqa,
         compute_capability,
         page_size not in [None, 128],  # paged KV non-TMA
+        rescale_threshold, #softmax rescale
+        disable_e2e, #softmax e2e
     )
     if compile_key not in _flash_attn_fwd.compile_cache:
         (
@@ -454,6 +458,8 @@ def _flash_attn_fwd(
                 paged_kv_non_tma=page_size not in [None, 128],
                 is_varlen_q=cu_seqlens_q is not None
                     or seqused_q is not None,
+                rescale_threshold=rescale_threshold,
+                disable_e2e=disable_e2e,
             )
         else:
             raise ValueError(
@@ -1188,6 +1194,8 @@ class FlashAttnFunc(torch.autograd.Function):
         mask_block_cnt: Optional[torch.Tensor] = None,
         mask_block_idx: Optional[torch.Tensor] = None,
         return_lse=False,
+        rescale_threshold: Optional[float] = None,
+        disable_e2e: bool = False,
     ):
         # Only create block sparse tensors if at least one block sparse parameter is provided
         block_sparse_tensors = None
@@ -1212,7 +1220,9 @@ class FlashAttnFunc(torch.autograd.Function):
             pack_gqa=pack_gqa,
             mask_mod=mask_mod,
             block_sparse_tensors=block_sparse_tensors,
-            return_lse=return_lse
+            return_lse=return_lse,            
+            rescale_threshold=rescale_threshold,
+            disable_e2e=disable_e2e
         )
         ctx.save_for_backward(q, k, v, out, lse)
         ctx.softmax_scale = softmax_scale
@@ -1264,7 +1274,9 @@ class FlashAttnVarlenFunc(torch.autograd.Function):
         deterministic: bool = False,
         score_mod: Optional[Callable] = None,
         aux_tensors: Optional[list] = None,
-        return_lse: bool = False,
+        return_lse: bool = False,        
+        rescale_threshold: Optional[float] = None,
+        disable_e2e: bool = False,
     ):
         out, lse = _flash_attn_fwd(
             q,
@@ -1285,7 +1297,9 @@ class FlashAttnVarlenFunc(torch.autograd.Function):
             pack_gqa=pack_gqa,
             score_mod=score_mod,
             aux_tensors=aux_tensors,
-            return_lse=return_lse
+            return_lse=return_lse,
+            rescale_threshold=rescale_threshold,
+            disable_e2e=disable_e2e
         )
         ctx.save_for_backward(q, k, v, out, lse, cu_seqlens_q, cu_seqlens_k, seqused_q, seqused_k)
         ctx.softmax_scale = softmax_scale
@@ -1338,6 +1352,8 @@ def flash_attn_func(
     mask_block_cnt: Optional[torch.Tensor] = None,
     mask_block_idx: Optional[torch.Tensor] = None,
     return_lse=False,
+    rescale_threshold: Optional[float] = None,
+    disable_e2e: bool = False,
 ):
     return FlashAttnFunc.apply(
         q,
@@ -1357,6 +1373,8 @@ def flash_attn_func(
         mask_block_cnt,
         mask_block_idx,
         return_lse,
+        rescale_threshold,
+        disable_e2e,
     )
 
 
@@ -1380,6 +1398,8 @@ def flash_attn_varlen_func(
     score_mod: Optional[Callable] = None,
     aux_tensors: Optional[list] = None,
     return_lse: bool = False,
+    rescale_threshold: Optional[float] = None,
+    disable_e2e: bool = False,
 ):
     return FlashAttnVarlenFunc.apply(
         q,
@@ -1400,7 +1420,9 @@ def flash_attn_varlen_func(
         deterministic,
         score_mod,
         aux_tensors,
-        return_lse
+        return_lse,
+        rescale_threshold,
+        disable_e2e,
     )
 
 
