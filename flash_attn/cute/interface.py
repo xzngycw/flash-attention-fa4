@@ -115,8 +115,8 @@ def _flash_attn_fwd(
     out: Optional[torch.Tensor] = None,
     lse: Optional[torch.Tensor] = None,
     aux_tensors: Optional[list[torch.Tensor]] = None,
-    rescale_threshold: Optional[float] = None,
-    disable_e2e: bool = False,
+    rescale_threshold: Optional[float] = 0.0,
+    disable_e2e: bool = True,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """Forward pass for FlashAttention.
 
@@ -1194,8 +1194,8 @@ class FlashAttnFunc(torch.autograd.Function):
         mask_block_cnt: Optional[torch.Tensor] = None,
         mask_block_idx: Optional[torch.Tensor] = None,
         return_lse=False,
-        rescale_threshold: Optional[float] = None,
-        disable_e2e: bool = False,
+        rescale_threshold: Optional[float] = 0.0,
+        disable_e2e: bool = True,
     ):
         # Only create block sparse tensors if at least one block sparse parameter is provided
         block_sparse_tensors = None
@@ -1275,8 +1275,8 @@ class FlashAttnVarlenFunc(torch.autograd.Function):
         score_mod: Optional[Callable] = None,
         aux_tensors: Optional[list] = None,
         return_lse: bool = False,        
-        rescale_threshold: Optional[float] = None,
-        disable_e2e: bool = False,
+        rescale_threshold: Optional[float] = 0.0,
+        disable_e2e: bool = True,
     ):
         out, lse = _flash_attn_fwd(
             q,
@@ -1352,8 +1352,8 @@ def flash_attn_func(
     mask_block_cnt: Optional[torch.Tensor] = None,
     mask_block_idx: Optional[torch.Tensor] = None,
     return_lse=False,
-    rescale_threshold: Optional[float] = None,
-    disable_e2e: bool = False,
+    rescale_threshold: Optional[float] = 0.0,
+    disable_e2e: bool = True,
 ):
     return FlashAttnFunc.apply(
         q,
@@ -1398,8 +1398,8 @@ def flash_attn_varlen_func(
     score_mod: Optional[Callable] = None,
     aux_tensors: Optional[list] = None,
     return_lse: bool = False,
-    rescale_threshold: Optional[float] = None,
-    disable_e2e: bool = False,
+    rescale_threshold: Optional[float] = 0.0,
+    disable_e2e: bool = True,
 ):
     return FlashAttnVarlenFunc.apply(
         q,
